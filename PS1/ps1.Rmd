@@ -1,0 +1,174 @@
+---
+title: "PS1"
+author: "ShubeiWang"
+date: "8/30/2018"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+## 3
+For question(a)-(c), I used the weather data in 2015-2018. Firstly I used 'curl' command and a for loop to download the files I needed. Then I subseted to the station corresponding to Death Valley, to TMAX and to March and put them into a single file named 'DVtmaxMarch'. At last I created an R chunk to read the file and make a single plot of side-by-side boxplots.
+
+For question(d), I wrote a shell function that takes four arguments:
+a string for identifying the location, the weather variable of interest, the years of interest and the month of interest, and put the data into a file named weather_data
+
+# (a)
+
+```{bash}
+## download yearly climate data from 2015 to 2018 and report the
+## number of observations in each year
+
+for ((i=5;i<=8;i++))
+do
+curl -o 201$i.csv.gz https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/by_year/201$i.csv.gz
+gzip -d 201$i.csv.gz
+count=$(cat 201$i.csv | wc -l)
+echo "There are$count observations in 201$i"
+done
+```
+# (b)
+```{bash}
+## subset to the station corresponding to Death Valley, to TMAX, and
+## to March, and put all the data into a single file 'DVtmaxMarch'
+
+## find the station ID for Death Valley
+curl -o stations.txt https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt
+dv=$(grep "DEATH VALLEY" stations.txt | head -1 | cut -d' ' -f1)
+rm stations.txt
+
+## subset the data and put it into a file
+for ((i=5;i<=8;i++))
+do
+grep $dv 201${i}.csv | grep TMAX | grep 201${i}03 >> DVtmaxMarch
+rm 201$i.csv
+done
+```
+# (c)
+```{r}
+## make a single plot of side-by-side boxplots containing TMAX on
+## each day using 'DVtmaxMarch'
+
+data <- read.csv('DVtmaxMarch', header = FALSE)
+for (j in 5:8){
+  for (i in 1:31){
+  data$V2 <- data$V2 - (data$V2 == 20100300+j*10000+i)*(20100300+j*10000)
+  }
+} # categorize the data by each day in March
+boxplot(V4~V2, data = data)
+```
+
+# (d)
+
+```{bash}
+## generate a file including the weather data of interest.
+## usage: get_weather "location" "weather variable" "year1 year2..." "month"
+## use get_weather "-h" to get more help information
+
+function get_weather(){
+if [ ${1}  == "-h" ]; then # give help information
+  echo -e "This function will generate a file including the weather data of interest.\n
+It includes four arguments: location, weather variable, years and month of interest.\n
+if location matches zero or more than one stations ID, you'll get a warning.\n
+usage: get_weather \"location\" \"weather variable\" \"year1 year2...\" \"month\"\n
+example: get_weather \"VALLEYVIEW AGDM\" \"TMAX\" \"2017 2018\" \"05\"\n"
+
+elif [ $# != "4" ]; then # give a warning when the number of arguments is wrong
+  echo "Warning: wrong number of arguments!"
+else 
+  curl -o stations.txt https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/ghcnd-stations.txt
+  ID=$(grep ${1} stations.txt | cut -d' ' -f1)
+  exist=$(grep ${1} stations.txt | uniq | wc -l)
+  rm stations.txt
+  if [ $exist != '1' ]; then
+  echo "Warning: can't find a single station!" # give a warning when there are no or one more matches
+  else
+    for i in $3
+    do
+    curl -o $i.csv.gz https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/by_year/$i.csv.gz
+    gzip -d $i.csv.gz
+    grep $ID ${i}.csv | grep $2 | grep ${i}${4} >> weather_data
+    rm $i.csv # remove the raw downloaded data files
+    done
+  fi
+fi  
+}
+
+## some test examples
+get_weather -h
+get_weather "PRAHA-KLEMENTINUM" "TMAX" "1817 1815"
+get_weather "PRAHA-KLEMENTINUM" "TMAX" "1817 1815" "05"
+head -n 10 weather_data
+```
+## 4
+For this question, I used bash to download all the files ending in .txt from the National Climate Data Center website.
+```{bash}
+## automatically download all the files ending in .txt from 
+## https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/.
+
+curl https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/ > html
+cat html | grep txt | cut -d'"' -f8 > txt_name # extract the names of all .txt files in 'txt_name'
+rm html
+
+count=$(cat txt_name | wc -l)
+for ((i=1;i<=count;i++)) # use a for loop to download the .txt files
+do
+name=$(head -$i txt_name | tail -1)
+curl https://www1.ncdc.noaa.gov/pub/data/ghcn/daily/$name > $name
+echo "downloading $name" #provide a status message telling the name of the file when downloading
+done
+```
+
+## 5(b)
+
+This package makes it possible to call Python from R and vice versa, and translate between R and Python objects.
+
+```{r setup, include=FALSE}
+## setup chunk
+
+knitr::knit_engines$set(python = reticulate::eng_python)
+library(reticulate)
+path_to_python <- "/anaconda/bin/python"
+use_python(path_to_python)
+```
+
+```{r}
+## read cpds.csv into R
+dataR <- read.csv("cpds.csv", stringsAsFactors = FALSE)
+```
+
+```{python}
+## manipulate the data in Python
+
+import pandas
+dataPy = r.dataR
+newdata = dataPy[dataPy['country'] == "Canada"]
+```
+
+```{r}
+## send data back to R
+
+newdata <- py$newdata
+year <- newdata[,"year"]
+gdp <- newdata[,"realgdpgr"]
+plot(gdp~year)
+title("Canada")
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
