@@ -1,0 +1,259 @@
+---
+title: "PS2"
+author: "ShubeiWang"
+date: "9/7/2018"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1
+
+In my code in question(3), I used header information to put metainfo and illustrate what the code does. I also used blank lines to seperate blocks of codes and comments. Moreover, I added some assertions and testing to check the code operates correctly.
+
+# 2
+
+## (a)
+
+The file sizes vary because the data is stored in CSV text file as ASCII text format while in Rda file as binary format. Also there are delimiters and other characters stored in CSV file. In binary format, each number is stored as 8 bytes while in ASCII plain text format each character as one byte. In the CSV text file, there are 133887710 characters since in an ASCII file each character takes up one byte of space.
+
+## (b)
+
+Because in this process every comma is actully replaced by a newline character, both of which take up one byte. Thus the file size remains unchanged.
+
+## (c)
+
+First:  Because read.csv is designed to read data frames which may have columns of very different classes. It uses scan to read the file and then process the results of scan. Unless colClasses is specified, all columns are read as character columns and then converted using type.convert to logical, integer, numeric, complex or factor as appropriate. So it takes much more time for read.csv to read the data than scan.
+
+Second: When colClasses is specified, it saves the time for read.csv to process the data hence the speed between these two situations are very close.
+
+Third: When using scan, if number of items is not specified, the internal mechanism re-allocates memory in powers of two. So it's faster to use load to read binary connections.
+
+## (d)
+
+Because save() automatically compress the file and since each element in b is identical, it saves more memory in the process of compressing. 
+
+# (3)
+
+## (a)
+
+```{r}
+## Programmatically return a list of the Google Scholar ID and citation page 
+## of the researcher of interest.
+## usage: get_page(x), argument x is the character string of the name of the researcher.
+
+library(xml2)
+library(rvest)
+library(magrittr)
+
+get_page <- function(name){
+
+# get the user ID
+id <- read_html(paste0("https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=", name, "&oq=geof"))%>%
+html_nodes(".gs_rt2") %>% sub(".*user=([A-Za-z-]+)&.*","\\1",.)
+
+# get the citation page
+page <- read_html(paste0("https://scholar.google.com/citations?user=",id, "&hl=en&oi=ao")) 
+
+list <- list(id, page)
+names(list) <- c("id", "page")
+return (list)
+}
+
+#test for Trevor Hastie
+get_page("trevorhastie")$id
+```
+
+## (b)
+
+```{r}
+## Create a dataframe of article title, authors, journal information, year of publication,
+## and number of citations for the reseacher of interest.
+## usage: get_article(x), argument x is the character string of the name of the researcher.
+
+get_article <- function(page){
+  
+title <- page %>% html_nodes( ".gsc_a_at") %>% html_text()
+
+author <- page %>%  html_nodes(".gs_gray") %>%
+  html_text() %>% as.data.frame(stringAsFactors=FALSE) %>%
+  .[seq(1, 20, by = 2),]
+
+journal <- page %>%  html_nodes(".gs_gray") %>% 
+  html_text() %>% as.data.frame(stringAsFactors=FALSE) %>%
+  .[seq(0, 20, by = 2),]
+
+year <- suppressWarnings(page %>% html_nodes(".gsc_a_y") %>%
+html_text() %>% as.numeric() %>% na.omit())
+
+num_citation <- page %>% html_nodes(".gsc_a_ac") %>% html_text()
+
+data <- data.frame(
+  title = title,
+  author = author,
+  journal = journal,
+  year = year,
+  num_citation = num_citation
+)
+
+return (data)
+} 
+
+#test for Trevor Hastie
+page1 <- get_page("trevorhastie")$page
+get_article(page1)
+
+#test for Geoffrey Hinton
+page2 <- get_page("geoffreyhinton")$page
+get_article(page2)
+```
+
+## (c)
+
+```{r}
+## Include checks in the code in (a) and carry out some tests.
+
+library(testthat)
+library(assertthat)
+
+get_page <- function(name){
+
+# check if the input is valid
+is_valid <- function(x) {
+  is.character(x)
+}
+on_failure(is_valid) <- function(call, env) {
+  "invalid input!"
+}
+assert_that(is_valid(name))
+
+# get the user ID
+id <- read_html(paste0("https://scholar.google.com/scholar?hl=en&as_sdt=0%2C5&q=", name, "&oq=geof"))%>%
+html_nodes(".gs_rt2") %>% sub(".*user=([A-Za-z-]+)&.*","\\1",.)
+
+# check if Google Scholar returns a result
+have_result <- function(x) {
+  length(x) != 0
+}
+on_failure(have_result) <- function(call, env) {
+  print("can't find a result!")
+}
+assert_that(have_result(id))
+
+# get the citation page
+page <- read_html(paste0("https://scholar.google.com/citations?user=",id, "&hl=en&oi=ao")) 
+
+list <- list(id, page)
+names(list) <- c("id", "page")
+return (list)
+}
+
+# carry out some tests
+test_that("get_page can detect invalid input and check if there is no result",{
+  name1 <- "geoffreyhinton"
+  name2 <- "trevorhastie"
+  name3 <- "shubeiwang"
+  
+  expect_type(get_page(name1),'list')
+  expect_type(get_page(name2),'list')
+  expect_error(get_page(name3))
+})
+```
+
+## (d)
+
+```{r, eval=FALSE}
+## Fix the function in (b) so that it gets all of the results for a researcher.
+## usage: get_all_article(x), argument x is the character string of the name of the researcher.
+
+get_all_article <- function(name){
+
+# get user ID
+id <- get_page(name)$id
+
+# create an empty data frame for future use
+data <- data.frame(
+  title = c(NA),
+  author = c(NA),
+  journal = c(NA),
+  year = c(NA),
+  num_citation = c(NA) )
+
+# use a loop to get all the articles
+for(i in 0:100)
+  {
+
+# set pagesize = 100
+site <- read_html(paste0("https://scholar.google.com/citations?user=", id,"&hl=en&cstart=",as.character(i*100),"&pagesize=100"))
+
+# break if there's no result in that page  
+message <- site %>% html_nodes(".gsc_a_e") %>%
+html_text()
+if(length(message)!=0) break
+
+title <- site %>% html_nodes( ".gsc_a_at") %>% html_text()
+len <- length(title)
+
+author <- site %>%  html_nodes(".gs_gray") %>% html_text() %>%
+as.data.frame(stringAsFactors=FALSE) %>%
+.[seq(1, 2*len, by = 2),]
+
+journal <- site %>%  html_nodes(".gs_gray") %>% html_text() %>%
+as.data.frame(stringAsFactors=FALSE) %>% .[seq(0, 2*len, by = 2),]
+
+year <- suppressWarnings(site %>% html_nodes(".gsc_a_y") %>%
+html_text() %>% as.numeric())
+year <- year[-1][-1]
+
+num_citation <- site %>% html_nodes(".gsc_a_ac") %>%
+html_text() %>% as.numeric(.) %>% replace(is.na(.),0)
+
+data_app <- data.frame(
+  title = title,
+  author = author,
+  journal = journal,
+  year = year,
+  num_citation = num_citation
+)
+
+# combine the data from each page
+data <- rbind(data, data_app)
+}
+data <- data[-1,]
+return (data)
+} 
+
+# store all data of Trevor Hastie in alldata
+alldata <- get_all_article("trevorhastie")
+```
+
+# (4)
+
+When webscraping data from Google Scholar, we should comply to the rules set by it according to the robot.txt file. It shows that the website allow partial access for crawling. We should avoid crawling the blocked areas such as "https://scholar.google.com/citations?", etc. Also we should not make queries too frequently.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
