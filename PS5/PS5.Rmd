@@ -1,0 +1,53 @@
+---
+title: "PS5"
+author: "ShubeiWang"
+date: "10/15/2018"
+output: pdf_document
+---
+
+## 1.
+
+Denote $\Lambda_{ii}=\lambda_{i},1\leqq i\leqq n$($\lambda_{i}$ is the $i^{th}$ eigenvalue), so $|\Lambda|=\Pi_i^n \lambda_{i}$. And because $\Gamma$ is an orthogonal matrix of eigenvectors, $|\Gamma|=|\Gamma^T|=1$. So $A =\Gamma \Lambda \Gamma^T \rightarrow |A| =|\Gamma| |\Lambda|| \Gamma^T|\rightarrow |A| = 1*\Pi_i^n \lambda_{i}*1=\Pi_i^n \lambda_{i}$, i.e. $|A|$ is the product of the eigenvalues.
+
+## 2.
+
+Because when $z$ is large the expression will cause overflow. The $exp(z)$ term will be *Inf* in R and the $expit$ function will be *NaN*. To avoid this we can re-express it as $expit(z)=\frac{1}{1+exp(-z)}$. This function will return 1 when $z$ takes very large values.
+
+## 3.
+
+Because we can only accurately present about 16 digits, x will lost accuracy after 4 decimal places. Thus their variance won't be the same and will be accurate to about 4 places. In this case they agree to 5 digits.
+
+## 4.
+
+# (a)
+
+Because in this case each task takes little time and the communication overhead of starting and stopping the tasks will reduce efficiency. So it's better to separate
+the computation into $p$ tasks.
+
+# (b)
+
+Assume each element in X, Y takes up $a$ bytes.
+
+A:
+
+(1) The memory used=$4n^2a$ bytes.
+(2) The communication cost$=n^3+2n^2$
+
+B:
+(1) The memory used=$(4n^2+p^3)a$
+(2) The communication cost=$p^2(2n^2/p+m^2)=2n^2p+n^2$
+
+We can conclude that A is better for minimizing memory use and B is for minimizing communication.
+
+
+
+
+
+
+
+
+
+
+
+
+
