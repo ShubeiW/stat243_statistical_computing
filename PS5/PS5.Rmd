@@ -30,14 +30,15 @@ Assume each element in X, Y takes up $a$ bytes.
 
 A:
 
-(1) The memory used=$4n^2a$ bytes.
-(2) The communication cost$=n^3+2n^2$
+(1) There will be p copies of X and p blocks of Y which take up $(pn^2+n^2)a$ bytes. And the result takes $n^2a$ bytes. So the memory used=$(p+2)n^2a$ bytes.
+(2) In total we need to transfer X p times, each of the p blocks of Y once and the result. So the communication cost$=n^2p+2n^2$.
 
 B:
-(1) The memory used=$(4n^2+p^3)a$
-(2) The communication cost=$p^2(2n^2/p+m^2)=2n^2p+n^2$
 
-We can conclude that A is better for minimizing memory use and B is for minimizing communication.
+(1) There will be p copies of one block of X and p blocks of Y at a single moment which take up $(n^2p/p+n^2)a=2n^2a$ bytes. And the result in a single moment takes up $n^2a/p$ bytes. So the memory used=$(2n^2+n^2/p)a$ bytes.
+(2) In total we need to transfer each of the p blocks of X p times, each of the p blocks of Y p times and the result.The communication cost=$2n^2p+n^2$.
+
+We can conclude that B is better for minimizing memory use and A is for minimizing communication.
 
 
 
